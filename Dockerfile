@@ -1,20 +1,11 @@
-FROM --platform=$BUILDPLATFORM docker.io/library/golang:1.25.1-bookworm AS build
+FROM alpine:3.21 AS alpine
+RUN apk add --no-cache tzdata
 
-WORKDIR /go/src/app
-
-COPY go.mod .
-COPY go.sum .
-
-RUN go mod download
-
-COPY . .
-
-ENV CGO_ENABLED=0
-
-RUN GOOS=$TARGETOS GOARCH=$TARGETPLATFORM go build -v -o /go/bin/unbound_exporter .
-
-FROM gcr.io/distroless/static-debian12
-
-COPY --from=build /go/bin/unbound_exporter /
-
+FROM scratch
+ARG TARGETARCH=amd64
+COPY --from=alpine /etc/passwd /etc/passwd
+COPY --from=alpine /etc/group /etc/group
+COPY --from=alpine /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --chmod=755 unbound_exporter-linux-${TARGETARCH} /unbound_exporter
+USER nobody
 ENTRYPOINT ["/unbound_exporter"]

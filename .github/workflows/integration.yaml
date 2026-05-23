@@ -26,6 +26,8 @@ jobs:
           go-version: "1.26.x"
       - name: checkout
         uses: actions/checkout@v6
+      - name: Build binary for Docker image
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o unbound_exporter-linux-amd64 .
       - name: Start containers
         working-directory: integration
         run: docker compose -f docker-compose-$TEST_TYPE.yml up --build --detach
