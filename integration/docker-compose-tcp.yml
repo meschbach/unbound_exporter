@@ -7,12 +7,18 @@ services:
       - "9167:9167"
     depends_on:
       unbound:
-        condition: service_started
+        condition: service_healthy
 
   unbound:
     build:
       context: .
       dockerfile: unbound.Containerfile
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q '00000000:22F9' /proc/net/tcp"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
     command: [ "/usr/local/sbin/unbound", "-v", "-d", "-c", "/etc/unbound/remote-control-tcp.conf" ]
     ports:
       - "1053:1053/udp"

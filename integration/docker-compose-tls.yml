@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: unbound.Containerfile
-    command: [ "/usr/local/sbin/unbound-control-setup" ]
+    command: ["sh", "-c", "/usr/local/sbin/unbound-control-setup && chmod a+r /usr/local/etc/unbound/unbound_*.pem /usr/local/etc/unbound/unbound_control.key"]
     volumes:
       - certs:/usr/local/etc/unbound
 
@@ -19,12 +19,18 @@ services:
       setup:
         condition: service_completed_successfully
       unbound:
-        condition: service_started
+        condition: service_healthy
 
   unbound:
     build:
       context: .
       dockerfile: unbound.Containerfile
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q '00000000:22FA' /proc/net/tcp"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
     command: [ "/usr/local/sbin/unbound", "-v", "-d", "-c", "/etc/unbound/remote-control-tls.conf" ]
     volumes:
       - certs:/certs:ro

@@ -5,6 +5,7 @@ package main
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/model"
@@ -22,6 +23,8 @@ import (
 //	go test --tags=integration
 //	docker compose down
 func TestIntegration(t *testing.T) {
+	waitForReadiness(t)
+
 	resp, err := http.Get("http://localhost:9167/metrics")
 	if err != nil {
 		t.Fatalf("Failed to fetch metrics from unbound_exporter: %v", err)
@@ -70,4 +73,20 @@ func TestIntegration(t *testing.T) {
 		t.Fatalf("unbound_exporter reported unhealthy, status code: %d", resp.StatusCode)
 	}
 
+}
+
+// waitForReadiness polls /metrics until the exporter accepts connections.
+// /_healthz returns 503 until the first successful scrape (see
+// UnboundExporter.unboundUp), so we poll the metrics endpoint instead.
+func waitForReadiness(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		_, err := http.Get("http://localhost:9167/metrics")
+		if err == nil {
+			return
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	t.Fatalf("Timed out waiting for unbound_exporter at http://localhost:9167/metrics")
 }
